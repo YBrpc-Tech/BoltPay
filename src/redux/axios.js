@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'https://boltpay-backend-1.onrender.com', // Replace with your actual base URL
+  baseURL: 'https://boltpay-backend-2.onrender.com', // Replace with your actual base URL
   headers: {
     'Content-Type': 'application/json',
   },
