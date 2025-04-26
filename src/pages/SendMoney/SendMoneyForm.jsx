@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Smartphone, Send, Zap } from "lucide-react";
@@ -21,27 +21,45 @@ const SendMoneyForm = () => {
 
   const { loading, invoice, error } = useSelector((state) => state.invoice);
 
-  // Navigate when invoice is created and loading is done
+  const conversionRate = 0.39; // 1 SAT = 0.39 XAF
+
+  // Calculate amount + 5% charges
+  const amountWithCharges = useMemo(() => {
+    if (!formData.amount) return 0;
+    const baseAmount = parseFloat(formData.amount);
+    const totalWithFee = baseAmount * 1.05;
+    return totalWithFee;
+  }, [formData.amount]);
+
+  // Calculate SATs to send (allowing up to 5 decimal places)
+  const satsToSend = useMemo(() => {
+    if (amountWithCharges === 0) return 0;
+    const sats = amountWithCharges / conversionRate;
+    return parseFloat(sats.toFixed(5)); // Limit to 5 decimals
+  }, [amountWithCharges]);
+
+  console.log("SATs to send:", satsToSend);
+
   useEffect(() => {
     if (!loading && invoice?.data) {
       console.log("Ejara message:", invoice.data.message);
       if (invoice.data.message === "Successful") {
         const refId = invoice.data.data.invoiceReferenceId;
 
-        // --- Prepare MoMo payment payload ---
         const momoPayload = {
           phoneNumber: formData.receiverNumber,
-          amount: formData.amount,
+          amount: formData.amount, // 👈 Pass original XAF amount
           emailAddress: formData.email,
-          paymentMode: receiverMethod.toUpperCase(), // MTN / ORANGE
-          externalReference: refId, // Use invoice reference id
+          paymentMode: receiverMethod.toUpperCase(),
+          externalReference: refId,
         };
 
-        // Navigate to pending page and pass momoPayload as state
-        navigate(`/pending/${refId}`, { state: { momoPayload } });
+        setTimeout(() => {
+          navigate(`/pending/${refId}`, { state: { momoPayload } });
+        }, 3000);
       }
     }
-  }, [loading, invoice, navigate, formData]);
+  }, [loading, invoice, navigate, formData, receiverMethod]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -61,9 +79,7 @@ const SendMoneyForm = () => {
     const payload = {
       amount: formData.amount,
       amountCurrency: "SATs",
-      description: `Send to ${
-        formData.receiverNumber
-      } via ${receiverMethod.toUpperCase()}`,
+      description: `Send to ${formData.receiverNumber} via ${receiverMethod.toUpperCase()}`,
       reference,
       expiresAt,
     };
@@ -134,7 +150,16 @@ const SendMoneyForm = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                   required
+                  step="any" // allow decimals if needed
                 />
+
+                {/* SATs Display */}
+                {formData.amount && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    After 5% charges,{" "}
+                    <span className="font-semibold">{satsToSend}</span> SATs will be sent
+                  </p>
+                )}
               </div>
             </div>
 

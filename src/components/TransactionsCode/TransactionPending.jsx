@@ -33,7 +33,7 @@ const TransactionPending = () => {
 
   // Trigger MoMo payout if invoice is paid
   useEffect(() => {
-    if (status.toLowerCase() === "successful" && momoPayload) {
+    if (status.toLowerCase() === "completed" && momoPayload) {
       dispatch(initiateMomoPayment(momoPayload));
       navigate("/success");
     }
